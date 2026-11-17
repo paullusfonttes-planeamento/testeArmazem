@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Armazém</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mut:#6b7385;--line:#e1e4ea;--pri:#1f5eff;--ok:#18a058;--warn:#d9822b;--bad:#d03050;--lw:60mm;--lh:30mm}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:#1c2230;color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+header h1{font-size:17px;margin:0;flex:1}
+header input{width:130px;padding:6px 8px;border-radius:6px;border:0}
+nav{display:flex;overflow-x:auto;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+nav button{flex:none;padding:12px 14px;border:0;background:none;font-size:14px;color:var(--mut);border-bottom:3px solid transparent;cursor:pointer}
+nav button.on{color:var(--pri);border-color:var(--pri);font-weight:600}
+main{max-width:900px;margin:0 auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+h2{font-size:16px;margin:0 0 10px}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
+input,select,textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
+button.b{padding:10px 14px;border:0;border-radius:8px;background:var(--pri);color:#fff;font:inherit;font-weight:600;cursor:pointer;margin-top:10px}
+button.b.sec{background:#e8ebf2;color:var(--ink)}button.b.red{background:var(--bad)}button.b.sm{padding:6px 10px;margin:0;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}th{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase}
+td.n,th.n{text-align:right}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600}
+.tag.bad{background:#fde7ec;color:var(--bad)}.tag.ok{background:#dff5e8;color:var(--ok)}.tag.warn{background:#fdf0df;color:var(--warn)}
+.mut{color:var(--mut)}.big{font-size:20px;font-weight:700}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1c2230;color:#fff;padding:10px 16px;border-radius:8px;display:none;z-index:50;max-width:90%}
+#toast.err{background:var(--bad)}
+#scanwrap{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;z-index:40;padding:16px;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+#reader{width:min(420px,100%);background:#000}
+.labels{display:flex;flex-wrap:wrap;gap:6px}
+.label{width:var(--lw);height:var(--lh);border:1px dashed #aaa;display:flex;align-items:center;gap:2mm;padding:1.5mm;overflow:hidden;background:#fff;color:#000;page-break-inside:avoid}
+.label .qr{height:100%;aspect-ratio:1}.label .qr svg{width:100%;height:100%}
+.label .tx{font-size:8pt;line-height:1.15;overflow:hidden}.label .tx b{font-size:10pt;display:block}.label .tx .mt{display:block;font-size:14pt;font-weight:700;margin-top:.5mm}
+#printarea{display:none}
+@media print{
+  body *{visibility:hidden}
+  #printarea,#printarea *{visibility:visible}
+  #printarea{display:block;position:absolute;left:0;top:0}
+  .label{border:0;margin:0}
+  @page{margin:2mm}
+}
+
+/* ---------- Telemóvel ---------- */
+html{-webkit-text-size-adjust:100%}
+button,nav button,tr[onclick]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media (max-width:640px){
+  body{font-size:16px}
+  header{padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top))}
+  header h1{flex:1 1 100%;font-size:16px}
+  header input{width:100%;padding:10px}
+  nav{padding-left:env(safe-area-inset-left);scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  nav button{padding:14px 14px;font-size:15px}
+  main{padding:10px 10px calc(24px + env(safe-area-inset-bottom))}
+  .card{padding:12px;border-radius:12px;margin-bottom:10px}
+  /* 16px nos campos evita o zoom automático do iPhone */
+  input,select,textarea{font-size:16px;padding:12px;min-height:46px}
+  .row{gap:6px}
+  .row>*{flex:1 1 100%;min-width:0}
+  button.b{width:100%;padding:13px 14px;font-size:16px;min-height:48px}
+  button.b.sm{width:auto;min-height:40px;padding:8px 12px}
+  .row>button.b.sm{width:100%;min-height:46px}
+  .big{font-size:22px}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:14px}
+  th,td{padding:10px 6px}
+  tr[onclick] td{min-height:44px}
+  #toast{bottom:calc(16px + env(safe-area-inset-bottom));width:calc(100% - 24px);max-width:none;text-align:center}
+  #scanwrap{padding:12px}
+  #reader{width:100%}
+  #scanwrap button.b{max-width:420px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Armazém · Matérias-primas</h1>
+  <input id="user" placeholder="O teu nome">
+</header>
+<nav id="nav"></nav>
+<main id="view"></main>
+<div id="toast"></div>
+<div id="scanwrap">
+  <div id="reader"></div>
+  <button class="b red" onclick="stopScan()">Fechar câmara</button>
+</div>
+<div id="printarea" class="labels"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+window.addEventListener('error', e => {
+  const v = document.querySelector('#view');
+  if (v && !v.innerHTML.trim()) v.innerHTML = '<div class="card"><h2>Erro</h2>' + String(e.message) + '</div>';
+});
+
+/* ===== ARMAZENAMENTO LOCAL (localStorage) ===== */
+const KEY = 'armazem_db_v1';
+let DB;
+function loadDB() {
+  try { DB = JSON.parse(localStorage.getItem(KEY)); } catch (e) { DB = null; }
+  if (!DB) DB = { materiais: [], localizacoes: [], rolos: [], movimentos: [], seq: 0, mov: 0 };
+}
+function saveDB() { localStorage.setItem(KEY, JSON.stringify(DB)); }
+loadDB();
+const clone = x => JSON.parse(JSON.stringify(x));
+const uid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'id' + Date.now() + Math.random().toString(16).slice(2);
+const hoje = () => new Date().toISOString().slice(0, 10);
+function mov(rolo, tipo, qtd, op, loc, user) {
+  DB.mov++;
+  DB.movimentos.push({ id: DB.mov, data: new Date().toISOString(), rolo, tipo, quantidade: qtd, op: op || null, localizacao_destino: loc || null, utilizador: user || null });
+}
+function stockView() {
+  return DB.materiais.map(m => {
+    const rs = DB.rolos.filter(r => r.material_id === m.id && r.estado !== 'esgotado');
+    const total = rs.reduce((a, r) => a + Number(r.quantidade_atual), 0);
+    return { ...m, stock_total: total, n_rolos: rs.length, abaixo_minimo: total < Number(m.stock_minimo || 0) };
+  });
+}
+
+class Q {
+  constructor(t) { this.t = t; this.mode = 'select'; this.f = []; this.ord = null; this.lim = null; this.single = false; this.cols = '*'; }
+  select(c) { this.cols = c || '*'; return this; }
+  eq(c, v) { this.f.push(r => r[c] === v); return this; }
+  neq(c, v) { this.f.push(r => r[c] !== v); return this; }
+  order(c, o) { this.ord = [c, !(o && o.ascending === false)]; return this; }
+  limit(n) { this.lim = n; return this; }
+  maybeSingle() { this.single = true; return this; }
+  insert(v) { this.mode = 'insert'; this.val = v; return this; }
+  update(v) { this.mode = 'update'; this.val = v; return this; }
+  upsert(v, o) { this.mode = 'upsert'; this.val = v; this.opt = o || {}; return this; }
+  then(res, rej) {
+    let out;
+    try { out = { data: this.run(), error: null }; } catch (e) { out = { data: null, error: { message: e.message } }; }
+    return Promise.resolve(out).then(res, rej);
+  }
+  run() {
+    const t = this.t;
+    if (this.mode === 'select') {
+      let rows = t === 'stock_materiais' ? stockView() : clone(DB[t]);
+      rows = rows.filter(r => this.f.every(fn => fn(r)));
+      if (this.ord) {
+        const [c, asc] = this.ord;
+        rows.sort((a, b) => {
+          let d = a[c] > b[c] ? 1 : a[c] < b[c] ? -1 : 0;
+          if (!d && a.id != null && typeof a.id === 'number') d = a.id - b.id;
+          return d * (asc ? 1 : -1);
+        });
+      }
+      if (this.lim) rows = rows.slice(0, this.lim);
+      if (t === 'rolos' && /materiais\s*\(/.test(this.cols)) rows.forEach(r => { r.materiais = clone(DB.materiais.find(m => m.id === r.material_id)); });
+      return this.single ? (rows[0] || null) : rows;
+    }
+    if (this.mode === 'insert') {
+      (Array.isArray(this.val) ? this.val : [this.val]).forEach(v => {
+        if (t === 'materiais') {
+          if (DB.materiais.some(m => m.referencia.toLowerCase() === String(v.referencia).toLowerCase())) throw new Error('Já existe um material com a referência ' + v.referencia);
+          DB.materiais.push({ id: uid(), tipo: 'tecido', unidade: 'm', stock_minimo: 0, ...v });
+        } else DB[t].push({ ...v });
+      });
+      saveDB(); return null;
+    }
+    if (this.mode === 'update') {
+      DB[t].filter(r => this.f.every(fn => fn(r))).forEach(r => Object.assign(r, this.val));
+      saveDB(); return null;
+    }
+    if (this.mode === 'upsert') {
+      const key = this.opt.onConflict || 'id';
+      (Array.isArray(this.val) ? this.val : [this.val]).forEach(v => {
+        const ex = DB[t].find(r => r[key] === v[key]);
+        if (!ex) DB[t].push({ ...v }); else if (!this.opt.ignoreDuplicates) Object.assign(ex, v);
+      });
+      saveDB(); return null;
+    }
+  }
+}
+
+const RPC = {
+  criar_rolo(a) {
+    if (!DB.materiais.some(m => m.id === a.p_material)) throw new Error('Material inválido');
+    if (a.p_loc && !DB.localizacoes.some(l => l.codigo === a.p_loc)) throw new Error('A localização ' + a.p_loc + ' não existe');
+    DB.seq++;
+    const cod = 'R-' + String(DB.seq).padStart(6, '0');
+    DB.rolos.push({ codigo: cod, material_id: a.p_material, lote: a.p_lote, quantidade_inicial: a.p_qtd, quantidade_atual: a.p_qtd, localizacao: a.p_loc, data_entrada: hoje(), estado: 'disponivel' });
+    mov(cod, 'entrada', a.p_qtd, null, a.p_loc, a.p_user);
+    saveDB(); return cod;
+  },
+  saida_rolo(a) {
+    const r = DB.rolos.find(x => x.codigo === a.p_rolo);
+    if (!r) throw new Error('Rolo ' + a.p_rolo + ' não existe');
+    if (!(a.p_qtd > 0)) throw new Error('Quantidade inválida');
+    if (a.p_qtd > r.quantidade_atual) throw new Error('Só existem ' + r.quantidade_atual + ' neste rolo');
+    r.quantidade_atual = Math.round((r.quantidade_atual - a.p_qtd) * 1e6) / 1e6;
+    if (r.quantidade_atual <= 0) r.estado = 'esgotado';
+    mov(r.codigo, 'saida', a.p_qtd, a.p_op, null, a.p_user);
+    saveDB(); return r.quantidade_atual;
+  },
+  mover_rolo(a) {
+    const r = DB.rolos.find(x => x.codigo === a.p_rolo);
+    if (!r) throw new Error('Rolo ' + a.p_rolo + ' não existe');
+    if (!DB.localizacoes.some(l => l.codigo === a.p_loc)) throw new Error('A localização ' + a.p_loc + ' não existe');
+    r.localizacao = a.p_loc;
+    mov(r.codigo, 'transferencia', null, null, a.p_loc, a.p_user);
+    saveDB(); return null;
+  },
+  ajustar_rolo(a) {
+    const r = DB.rolos.find(x => x.codigo === a.p_rolo);
+    if (!r) throw new Error('Rolo ' + a.p_rolo + ' não existe');
+    const dif = a.p_nova_qtd - r.quantidade_atual;
+    r.quantidade_atual = a.p_nova_qtd;
+    r.estado = a.p_nova_qtd <= 0 ? 'esgotado' : (r.estado === 'esgotado' ? 'disponivel' : r.estado);
+    mov(r.codigo, 'ajuste', dif, null, null, a.p_user);
+    saveDB(); return null;
+  }
+};
+
+const sb = {
+  from: t => new Q(t),
+  rpc: (fn, a) => {
+    let out;
+    try { out = { data: RPC[fn](a), error: null }; } catch (e) { out = { data: null, error: { message: e.message } }; }
+    return Promise.resolve(out);
+  }
+};
+/* ===== FIM ARMAZENAMENTO LOCAL ===== */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => (Math.round(Number(n || 0) * 100) / 100).toLocaleString('pt-PT');
+
+const TABS = [['consultar','Ler / Consultar'],['entrada','Entrada'],['stock','Stock'],['inventario','Inventário'],['materiais','Materiais'],['locais','Localizações'],['etiquetas','Etiquetas'],['copia','Cópia']];
+let tab = 'consultar';
+
+/* ---------- utilitários ---------- */
+function toast(msg, err) {
+  const t = $('#toast'); t.textContent = msg; t.className = err ? 'err' : '';
+  t.style.display = 'block'; clearTimeout(toast.t);
+  toast.t = setTimeout(() => t.style.display = 'none', err ? 5000 : 2500);
+}
+const user = () => ($('#user').value || '').trim() || null;
+$('#user').value = localStorage.getItem('armazem_user') || '';
+$('#user').addEventListener('change', e => localStorage.setItem('armazem_user', e.target.value));
+
+async function q(promise) {
+  const { data, error } = await promise;
+  if (error) { toast(error.message, true); throw error; }
+  return data;
+}
+
+let scanner = null;
+function scan(cb) {
+  $('#scanwrap').style.display = 'flex';
+  scanner = new Html5Qrcode('reader');
+  scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 240 }, txt => {
+    stopScan(); cb(txt.trim());
+  }).catch(e => { stopScan(); toast('Não consegui abrir a câmara: ' + e, true); });
+}
+function stopScan() {
+  $('#scanwrap').style.display = 'none';
+  if (scanner) { scanner.stop().catch(() => {}).finally(() => { try { scanner.clear(); } catch (e) {} scanner = null; }); }
+}
+
+function qrSvg(text) {
+  const qr = qrcode(0, 'M'); qr.addData(text); qr.make();
+  return qr.createSvgTag({ scalable: true, margin: 0 });
+}
+function labelHtml(code, l1, l2, l3) {
+  return `<div class="label"><div class="qr">${qrSvg(code)}</div><div class="tx"><b>${esc(code)}</b>${esc(l1 || '')}<br>${esc(l2 || '')}${l3 ? `<span class="mt">${esc(l3)}</span>` : ''}</div></div>`;
+}
+function printLabels(html) {
+  const lw = localStorage.getItem('lw') || 60, lh = localStorage.getItem('lh') || 30;
+  document.documentElement.style.setProperty('--lw', lw + 'mm');
+  document.documentElement.style.setProperty('--lh', lh + 'mm');
+  $('#printarea').innerHTML = html;
+  setTimeout(() => window.print(), 150);
+}
+
+/* ---------- navegação ---------- */
+function renderNav() {
+  $('#nav').innerHTML = TABS.map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" onclick="go('${k}')">${n}</button>`).join('');
+}
+function go(k) { tab = k; renderNav(); views[k](); }
+
+const views = {};
+
+/* ---------- CONSULTAR ---------- */
+views.consultar = async () => {
+  $('#view').innerHTML = `
+  <div class="card"><h2>Ler QR de rolo ou caixa</h2>
+    <div class="row"><button class="b" onclick="scan(abrirRolo)">📷 Ler com a câmara</button></div>
+    <label>Ou escrever o código</label>
+    <div class="row"><input id="cod" placeholder="R-000123"><button class="b sec" style="flex:none" onclick="abrirRolo($('#cod').value.trim().toUpperCase())">Abrir</button></div>
+  </div>
+  <div id="rolo"></div>`;
+};
+
+async function abrirRolo(cod) {
+  if (!cod) return;
+  if (tab !== 'consultar') go('consultar'), await new Promise(r => setTimeout(r, 0));
+  if (cod.startsWith('L-')) return abrirLocal(cod);
+  const r = await q(sb.from('rolos').select('*, materiais(*)').eq('codigo', cod).maybeSingle());
+  if (!r) return toast('Código não encontrado: ' + cod, true);
+  const m = r.materiais;
+  const movs = await q(sb.from('movimentos').select('*').eq('rolo', cod).order('data', { ascending: false }).limit(8));
+  $('#rolo').innerHTML = `
+  <div class="card">
+    <div class="mut">${esc(r.codigo)} · ${esc(m.tipo)}</div>
+    <div class="big">${esc(m.referencia)} ${esc(m.descricao || '')}</div>
+    <div class="mut">${esc(m.cor || '')} · Lote ${esc(r.lote || '—')} · ${esc(m.fornecedor || '')}</div>
+    <div style="margin:10px 0"><span class="big">${fmt(r.quantidade_atual)} ${esc(m.unidade)}</span>
+      <span class="mut"> de ${fmt(r.quantidade_inicial)}</span>
+      <span class="tag ${r.estado === 'disponivel' ? 'ok' : r.estado === 'quarentena' ? 'warn' : 'bad'}">${esc(r.estado)}</span></div>
+    <div>📍 <b>${esc(r.localizacao || 'sem localização')}</b></div>
+    <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+    <div class="row">
+      <div><label>Saída (${esc(m.unidade)})</label><input id="sq" type="number" step="0.01" min="0"></div>
+      <div><label>OP / Encomenda</label><input id="sop" placeholder="OP-123"></div>
+    </div>
+    <button class="b" onclick="fazerSaida('${esc(r.codigo)}')">Registar saída</button>
+    <div class="row" style="margin-top:6px">
+      <div><label>Mover para localização</label>
+        <div class="row"><input id="nloc" placeholder="L-A-02-3"><button class="b sec sm" style="flex:none" onclick="scan(c=>{$('#nloc').value=c})">📷</button></div></div>
+      <div><label>Corrigir quantidade</label><input id="nq" type="number" step="0.01" min="0"></div>
+    </div>
+    <button class="b sec" onclick="fazerMover('${esc(r.codigo)}')">Mover</button>
+    <button class="b sec" onclick="fazerAjuste('${esc(r.codigo)}')">Corrigir quantidade</button>
+    <button class="b sec" onclick="printLabels(labelHtml('${esc(r.codigo)}','${esc(m.referencia)} ${esc(m.cor || '')}','Lote ${esc(r.lote || '')}','${fmt(r.quantidade_inicial)} ${esc(m.unidade)}'))">🖨 Etiqueta</button>
+  </div>
+  <div class="card"><h2>Últimos movimentos</h2>
+  <table><tr><th>Data</th><th>Tipo</th><th class="n">Qtd</th><th>OP / destino</th></tr>
+  ${movs.map(x => `<tr><td>${new Date(x.data).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })}</td><td>${esc(x.tipo)}</td><td class="n">${x.quantidade != null ? fmt(x.quantidade) : ''}</td><td>${esc(x.op || x.localizacao_destino || '')}</td></tr>`).join('')}
+  </table></div>`;
+}
+
+async function abrirLocal(cod) {
+  const rs = await q(sb.from('rolos').select('codigo, quantidade_atual, lote, materiais(referencia,cor,unidade)').eq('localizacao', cod).neq('estado', 'esgotado').order('codigo'));
+  $('#rolo').innerHTML = `<div class="card"><h2>📍 ${esc(cod)} — ${rs.length} rolo(s)</h2>
+  <table><tr><th>Rolo</th><th>Material</th><th>Lote</th><th class="n">Qtd</th></tr>
+  ${rs.map(r => `<tr onclick="abrirRolo('${esc(r.codigo)}')" style="cursor:pointer"><td>${esc(r.codigo)}</td><td>${esc(r.materiais.referencia)} ${esc(r.materiais.cor || '')}</td><td>${esc(r.lote || '')}</td><td class="n">${fmt(r.quantidade_atual)} ${esc(r.materiais.unidade)}</td></tr>`).join('')}
+  </table></div>`;
+}
+
+async function fazerSaida(cod) {
+  const qtd = parseFloat($('#sq').value);
+  if (!(qtd > 0)) return toast('Indica a quantidade', true);
+  const novo = await q(sb.rpc('saida_rolo', { p_rolo: cod, p_qtd: qtd, p_op: $('#sop').value.trim() || null, p_user: user() }));
+  toast('Saída registada. Restam ' + fmt(novo)); abrirRolo(cod);
+}
+async function fazerMover(cod) {
+  const loc = $('#nloc').value.trim().toUpperCase();
+  if (!loc) return toast('Indica a localização', true);
+  await q(sb.rpc('mover_rolo', { p_rolo: cod, p_loc: loc, p_user: user() }));
+  toast('Movido para ' + loc); abrirRolo(cod);
+}
+async function fazerAjuste(cod) {
+  const v = parseFloat($('#nq').value);
+  if (isNaN(v) || v < 0) return toast('Indica a quantidade correta', true);
+  await q(sb.rpc('ajustar_rolo', { p_rolo: cod, p_nova_qtd: v, p_user: user() }));
+  toast('Quantidade corrigida'); abrirRolo(cod);
+}
+
+/* ---------- ENTRADA ---------- */
+views.entrada = async () => {
+  const [mats, locs] = await Promise.all([
+    q(sb.from('materiais').select('*').order('referencia')),
+    q(sb.from('localizacoes').select('*').order('codigo'))
+  ]);
+  $('#view').innerHTML = `
+  <div class="card"><h2>Entrada de material</h2>
+    <label>Material</label>
+    <select id="emat">${mats.map(m => `<option value="${m.id}" data-u="${esc(m.unidade)}">${esc(m.referencia)} — ${esc(m.descricao || '')} ${esc(m.cor || '')}</option>`).join('')}</select>
+    ${mats.length ? '' : '<div class="mut">Primeiro cria o material no separador “Materiais”.</div>'}
+    <div class="row">
+      <div><label>Lote</label><input id="elote"></div>
+      <div><label>Quantidade por rolo/caixa</label><input id="eqtd" type="number" step="0.01" min="0"></div>
+      <div><label>Nº de rolos iguais</label><input id="en" type="number" min="1" value="1"></div>
+    </div>
+    <label>Localização</label>
+    <div class="row"><select id="eloc"><option value="">— sem localização —</option>${locs.map(l => `<option>${esc(l.codigo)}</option>`).join('')}</select>
+    <button class="b sec" style="flex:none;margin:0" onclick="scan(c=>{ if([...$('#eloc').options].some(o=>o.value===c)) $('#eloc').value=c; else toast('Localização não existe: '+c,true)})">📷 Ler prateleira</button></div>
+    <button class="b" onclick="fazerEntrada()">Registar entrada e gerar etiquetas</button>
+  </div>
+  <div id="eout"></div>`;
+};
+async function fazerEntrada() {
+  const mat = $('#emat').value, qtd = parseFloat($('#eqtd').value), n = parseInt($('#en').value) || 1;
+  if (!mat) return toast('Escolhe o material', true);
+  if (!(qtd > 0)) return toast('Indica a quantidade', true);
+  const sel = $('#emat').selectedOptions[0];
+  const lote = $('#elote').value.trim(), loc = $('#eloc').value || null;
+  const codes = [];
+  for (let i = 0; i < n; i++) {
+    codes.push(await q(sb.rpc('criar_rolo', { p_material: mat, p_lote: lote || null, p_qtd: qtd, p_loc: loc, p_user: user() })));
+  }
+  const un = sel.dataset.u, ref = sel.textContent.split('—')[0].trim();
+  const html = codes.map(c => labelHtml(c, ref, 'Lote ' + lote, fmt(qtd) + ' ' + un)).join('');
+  $('#eout').innerHTML = `<div class="card"><h2>${codes.length} etiqueta(s) criada(s)</h2>
+    <div class="mut">${codes.join(', ')}</div>
+    <button class="b" id="pbtn">🖨 Imprimir etiquetas</button></div>`;
+  $('#pbtn').onclick = () => printLabels(html);
+  toast('Entrada registada');
+}
+
+/* ---------- STOCK ---------- */
+views.stock = async () => {
+  const rows = await q(sb.from('stock_materiais').select('*').order('referencia'));
+  const baixo = rows.filter(r => r.abaixo_minimo);
+  $('#view').innerHTML = `
+  ${baixo.length ? `<div class="card" style="border-color:var(--bad)"><h2>⚠ Abaixo do mínimo (${baixo.length})</h2>
+    ${baixo.map(r => `<div>${esc(r.referencia)} ${esc(r.cor || '')}: <b>${fmt(r.stock_total)} ${esc(r.unidade)}</b> <span class="mut">(mín. ${fmt(r.stock_minimo)})</span></div>`).join('')}</div>` : ''}
+  <div class="card"><h2>Stock por material</h2>
+    <input id="filtro" placeholder="Filtrar…" oninput="filtrarStock()">
+    <table id="tstock"><tr><th>Material</th><th>Cor</th><th class="n">Stock</th><th class="n">Rolos</th><th class="n">Mín.</th></tr>
+    ${rows.map(r => `<tr onclick="detMat('${r.id}')" style="cursor:pointer"><td>${esc(r.referencia)}<div class="mut">${esc(r.descricao || '')}</div></td><td>${esc(r.cor || '')}</td>
+      <td class="n"><b>${fmt(r.stock_total)}</b> ${esc(r.unidade)} ${r.abaixo_minimo ? '<span class="tag bad">baixo</span>' : ''}</td><td class="n">${r.n_rolos}</td><td class="n">${fmt(r.stock_minimo)}</td></tr>`).join('')}
+    </table></div><div id="det"></div>`;
+};
+function filtrarStock() {
+  const f = $('#filtro').value.toLowerCase();
+  document.querySelectorAll('#tstock tr').forEach((tr, i) => { if (i) tr.style.display = tr.textContent.toLowerCase().includes(f) ? '' : 'none'; });
+}
+async function detMat(id) {
+  const rs = await q(sb.from('rolos').select('*').eq('material_id', id).neq('estado', 'esgotado').order('data_entrada'));
+  $('#det').innerHTML = `<div class="card"><h2>Rolos em stock (mais antigos primeiro — FIFO)</h2>
+  <table><tr><th>Rolo</th><th>Lote</th><th>Local</th><th>Entrada</th><th class="n">Qtd</th></tr>
+  ${rs.map(r => `<tr onclick="abrirRolo('${esc(r.codigo)}')" style="cursor:pointer"><td>${esc(r.codigo)}</td><td>${esc(r.lote || '')}</td><td>${esc(r.localizacao || '—')}</td><td>${esc(r.data_entrada)}</td><td class="n">${fmt(r.quantidade_atual)}</td></tr>`).join('')}
+  </table></div>`;
+  $('#det').scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ---------- INVENTÁRIO ---------- */
+let inv = { loc: null, esperado: [], lidos: new Set() };
+views.inventario = async () => {
+  const locs = await q(sb.from('localizacoes').select('codigo').order('codigo'));
+  $('#view').innerHTML = `<div class="card"><h2>Inventário por localização</h2>
+    <label>Localização a contar</label>
+    <div class="row"><select id="iloc">${locs.map(l => `<option>${esc(l.codigo)}</option>`).join('')}</select>
+    <button class="b sec" style="flex:none;margin:0" onclick="scan(c=>{$('#iloc').value=c})">📷</button></div>
+    <button class="b" onclick="iniciarInv()">Começar contagem</button></div><div id="inv"></div>`;
+};
+async function iniciarInv() {
+  inv.loc = $('#iloc').value;
+  inv.esperado = await q(sb.from('rolos').select('codigo, quantidade_atual, materiais(referencia,cor,unidade)').eq('localizacao', inv.loc).neq('estado', 'esgotado'));
+  inv.lidos = new Set(); renderInv();
+}
+function lerInv() {
+  scan(c => { inv.lidos.add(c.toUpperCase()); renderInv(); setTimeout(lerInv, 300); });
+}
+function renderInv() {
+  const exp = new Set(inv.esperado.map(r => r.codigo));
+  const falta = inv.esperado.filter(r => !inv.lidos.has(r.codigo));
+  const extra = [...inv.lidos].filter(c => !exp.has(c));
+  $('#inv').innerHTML = `<div class="card"><h2>📍 ${esc(inv.loc)}: ${inv.lidos.size} lidos / ${inv.esperado.length} esperados</h2>
+    <button class="b" onclick="lerInv()">📷 Ler próximo rolo (a câmara reabre sozinha)</button>
+    <div class="mut" style="margin-top:6px">Para terminar, fecha a câmara.</div>
+    <h2 style="margin-top:14px">Em falta (${falta.length})</h2>
+    ${falta.map(r => `<div><span class="tag bad">falta</span> ${esc(r.codigo)} ${esc(r.materiais.referencia)} ${esc(r.materiais.cor || '')} — ${fmt(r.quantidade_atual)} ${esc(r.materiais.unidade)}</div>`).join('') || '<div class="mut">Nenhum</div>'}
+    <h2 style="margin-top:14px">Lidos que não estavam registados aqui (${extra.length})</h2>
+    ${extra.map(c => `<div><span class="tag warn">extra</span> ${esc(c)} <button class="b sm sec" onclick="fixarLoc('${esc(c)}')">Mover para ${esc(inv.loc)}</button></div>`).join('') || '<div class="mut">Nenhum</div>'}
+  </div>`;
+}
+async function fixarLoc(c) {
+  await q(sb.rpc('mover_rolo', { p_rolo: c, p_loc: inv.loc, p_user: user() }));
+  toast(c + ' movido'); iniciarInv();
+}
+
+/* ---------- MATERIAIS (com rolos) ---------- */
+function parseMetros(txt) {
+  const out = [];
+  String(txt || '').trim().split(/[;\s]+/).filter(Boolean).forEach(tok => {
+    const m = tok.toLowerCase().replace(',', '.').match(/^(?:(\d+)x)?(\d+(?:\.\d+)?)$/);
+    if (!m || !(parseFloat(m[2]) > 0)) throw new Error('Metros inválidos: "' + tok + '". Exemplo: 40 35,5 3x50');
+    const n = m[1] ? parseInt(m[1]) : 1;
+    for (let i = 0; i < n; i++) out.push(parseFloat(m[2]));
+  });
+  if (out.length > 200) throw new Error('Máximo de 200 rolos de cada vez');
+  return out;
+}
+const locOpts = locs => '<option value="">— sem localização —</option>' + locs.map(l => `<option>${esc(l.codigo)}</option>`).join('');
+const etiquetaRolo = (r, m) => labelHtml(r.codigo, m.referencia + ' ' + (m.cor || ''), 'Lote ' + (r.lote || '—'), fmt(r.quantidade_inicial) + ' ' + m.unidade);
+
+async function imprimirCodigos(codes) {
+  const rs = await q(sb.from('rolos').select('*, materiais(*)'));
+  const html = codes.map(c => rs.find(r => r.codigo === c)).filter(Boolean).map(r => etiquetaRolo(r, r.materiais)).join('');
+  if (!html) return toast('Nada para imprimir', true);
+  printLabels(html);
+}
+
+views.materiais = async () => {
+  const [ms, rs, locs] = await Promise.all([
+    q(sb.from('materiais').select('*').order('referencia')),
+    q(sb.from('rolos').select('*').order('codigo')),
+    q(sb.from('localizacoes').select('*').order('codigo'))
+  ]);
+  $('#view').innerHTML = `<div class="card"><h2>Novo material</h2>
+    <div class="row"><div><label>Referência *</label><input id="mref" placeholder="TEC-0045"></div>
+    <div><label>Descrição</label><input id="mdesc"></div></div>
+    <div class="row"><div><label>Tipo</label><select id="mtipo"><option value="tecido">Tecido</option><option value="acessorio">Acessório</option></select></div>
+    <div><label>Unidade</label><select id="munid"><option>m</option><option>kg</option><option>un</option></select></div>
+    <div><label>Cor</label><input id="mcor"></div></div>
+    <div class="row"><div><label>Fornecedor</label><input id="mforn"></div>
+    <div><label>Stock mínimo</label><input id="mmin" type="number" step="0.01" value="0" inputmode="decimal"></div></div>
+    <hr style="border:0;border-top:1px solid var(--line);margin:12px 0 4px">
+    <div class="mut"><b>Rolos (opcional)</b> — cada rolo ganha um código e uma etiqueta com os seus metros.</div>
+    <div class="row"><div><label>Metros de cada rolo</label><input id="mmetros" placeholder="ex: 40 35,5 50  ou  3x40" inputmode="text"></div>
+    <div><label>Lote</label><input id="mlote"></div></div>
+    <label>Localização</label><select id="mloc">${locOpts(locs)}</select>
+    <button class="b" onclick="novoMat()">Guardar material</button></div>
+  <div id="mres"></div>
+  ${ms.map(m => {
+    const mine = rs.filter(r => r.material_id === m.id);
+    const ativos = mine.filter(r => r.estado !== 'esgotado');
+    const total = ativos.reduce((a, r) => a + Number(r.quantidade_atual), 0);
+    return `<div class="card">
+      <div class="mut">${esc(m.tipo || '')}${m.fornecedor ? ' · ' + esc(m.fornecedor) : ''}</div>
+      <div class="big">${esc(m.referencia)} <span style="font-weight:400;font-size:16px">${esc(m.descricao || '')} ${esc(m.cor || '')}</span></div>
+      <div style="margin:4px 0 8px"><b>${fmt(total)} ${esc(m.unidade)}</b> em ${ativos.length} rolo(s)
+        <span class="mut"> · mínimo </span><input style="width:90px;display:inline-block;min-height:0;padding:5px 8px" type="number" value="${m.stock_minimo}" onchange="setMin('${m.id}',this.value)"></div>
+      ${mine.length ? `<div class="tw"><table><tr><th>Rolo</th><th>Lote</th><th class="n">Metros</th><th>Local</th><th></th></tr>
+      ${mine.map(r => `<tr${r.estado === 'esgotado' ? ' style="opacity:.5"' : ''}><td>${esc(r.codigo)}</td><td>${esc(r.lote || '—')}</td>
+        <td class="n"><b>${fmt(r.quantidade_atual)}</b>${Number(r.quantidade_atual) !== Number(r.quantidade_inicial) ? `<div class="mut">de ${fmt(r.quantidade_inicial)}</div>` : ''}</td>
+        <td>${esc(r.localizacao || '—')}</td>
+        <td><button class="b sm sec" onclick="imprimirCodigos(['${esc(r.codigo)}'])">🖨</button></td></tr>`).join('')}
+      </table></div>
+      <button class="b sec sm" style="margin-top:8px" onclick="imprimirCodigos([${ativos.map(r => `'${esc(r.codigo)}'`).join(',')}])">🖨 Etiquetas de todos os rolos em stock (${ativos.length})</button>`
+      : '<div class="mut">Ainda sem rolos.</div>'}
+      <details style="margin-top:10px"><summary style="cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0">+ Adicionar rolos</summary>
+        <div class="row"><div><label>Metros de cada rolo</label><input id="am-${m.id}" placeholder="ex: 40 35,5 50  ou  3x40"></div>
+        <div><label>Lote</label><input id="al-${m.id}"></div></div>
+        <label>Localização</label><select id="ac-${m.id}">${locOpts(locs)}</select>
+        <button class="b" onclick="addRolos('${m.id}')">Criar rolos e etiquetas</button>
+      </details>
+    </div>`;
+  }).join('') || '<div class="card mut">Ainda não há materiais.</div>'}`;
+};
+
+function resultadoRolos(codes) {
+  $('#mres').innerHTML = `<div class="card" style="border-color:var(--ok)"><h2>✔ ${codes.length} rolo(s) criado(s)</h2>
+    <div class="mut">${codes.join(', ')}</div>
+    <button class="b" id="mpbtn">🖨 Imprimir ${codes.length} etiqueta(s)</button></div>`;
+  $('#mpbtn').onclick = () => imprimirCodigos(codes);
+  $('#mres').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function novoMat() {
+  const ref = $('#mref').value.trim();
+  if (!ref) return toast('Indica a referência', true);
+  let metros = [];
+  try { metros = parseMetros($('#mmetros').value); } catch (e) { return toast(e.message, true); }
+  const lote = $('#mlote').value.trim(), loc = $('#mloc').value || null;
+  await q(sb.from('materiais').insert({ referencia: ref, descricao: $('#mdesc').value.trim(), tipo: $('#mtipo').value, unidade: $('#munid').value, cor: $('#mcor').value.trim(), fornecedor: $('#mforn').value.trim(), stock_minimo: parseFloat($('#mmin').value) || 0 }));
+  let codes = [];
+  if (metros.length) {
+    const mat = (await q(sb.from('materiais').select('*'))).find(x => x.referencia === ref);
+    for (const m of metros) codes.push(await q(sb.rpc('criar_rolo', { p_material: mat.id, p_lote: lote || null, p_qtd: m, p_loc: loc, p_user: user() })));
+  }
+  toast('Material criado' + (codes.length ? ' com ' + codes.length + ' rolo(s)' : ''));
+  await views.materiais();
+  if (codes.length) resultadoRolos(codes);
+}
+
+async function addRolos(id) {
+  let metros;
+  try { metros = parseMetros($('#am-' + id).value); } catch (e) { return toast(e.message, true); }
+  if (!metros.length) return toast('Indica os metros de cada rolo', true);
+  const lote = $('#al-' + id).value.trim(), loc = $('#ac-' + id).value || null, codes = [];
+  for (const m of metros) codes.push(await q(sb.rpc('criar_rolo', { p_material: id, p_lote: lote || null, p_qtd: m, p_loc: loc, p_user: user() })));
+  toast(codes.length + ' rolo(s) criado(s)');
+  await views.materiais();
+  resultadoRolos(codes);
+}
+async function setMin(id, v) { await q(sb.from('materiais').update({ stock_minimo: parseFloat(v) || 0 }).eq('id', id)); toast('Mínimo atualizado'); }
+
+/* ---------- LOCALIZAÇÕES ---------- */
+views.locais = async () => {
+  const ls = await q(sb.from('localizacoes').select('*').order('codigo'));
+  $('#view').innerHTML = `<div class="card"><h2>Criar localizações</h2>
+    <div class="mut">Formato: L-corredor-estante-nível. Exemplo: corredor A, estantes 1 a 4, níveis 1 a 3 → 12 localizações de uma vez.</div>
+    <div class="row"><div><label>Corredor</label><input id="lc" value="A"></div>
+    <div><label>Estantes (de–até)</label><div class="row"><input id="le1" type="number" value="1"><input id="le2" type="number" value="4"></div></div>
+    <div><label>Níveis (de–até)</label><div class="row"><input id="ln1" type="number" value="1"><input id="ln2" type="number" value="3"></div></div></div>
+    <button class="b" onclick="criarLocais()">Criar</button></div>
+  <div class="card"><h2>Localizações (${ls.length})</h2>
+    <button class="b sec sm" onclick="etiquetasLocais()">🖨 Imprimir etiquetas de todas</button>
+    <div style="margin-top:10px">${ls.map(l => `<span class="tag ok" style="margin:2px">${esc(l.codigo)}</span>`).join('')}</div></div>`;
+};
+async function criarLocais() {
+  const c = $('#lc').value.trim().toUpperCase(), rows = [];
+  const p = n => String(n).padStart(2, '0');
+  for (let e = +$('#le1').value; e <= +$('#le2').value; e++)
+    for (let n = +$('#ln1').value; n <= +$('#ln2').value; n++) rows.push({ codigo: `L-${c}-${p(e)}-${n}` });
+  if (!rows.length) return toast('Intervalo inválido', true);
+  await q(sb.from('localizacoes').upsert(rows, { onConflict: 'codigo', ignoreDuplicates: true }));
+  toast(rows.length + ' localizações criadas'); views.locais();
+}
+async function etiquetasLocais() {
+  const ls = await q(sb.from('localizacoes').select('codigo').order('codigo'));
+  printLabels(ls.map(l => labelHtml(l.codigo, 'Localização', '', '')).join(''));
+}
+
+/* ---------- ETIQUETAS ---------- */
+let _matsEt = [], _rolosEt = [];
+views.etiquetas = async () => {
+  _matsEt = await q(sb.from('materiais').select('*').order('referencia'));
+  $('#view').innerHTML = `<div class="card"><h2>Tamanho da etiqueta</h2>
+    <div class="row"><div><label>Largura (mm)</label><input id="lw" type="number" value="${localStorage.getItem('lw') || 60}"></div>
+    <div><label>Altura (mm)</label><input id="lh" type="number" value="${localStorage.getItem('lh') || 30}"></div></div>
+    <button class="b" onclick="localStorage.setItem('lw',$('#lw').value);localStorage.setItem('lh',$('#lh').value);toast('Guardado')">Guardar</button>
+    <div class="mut" style="margin-top:8px">Ajusta ao rolo de etiquetas da tua impressora. Na janela de impressão escolhe a impressora de etiquetas e margens “nenhuma”.</div></div>
+  <div class="card"><h2>Imprimir etiquetas de tecidos guardados</h2>
+    ${_matsEt.length ? `
+    <label>Tecido / material</label>
+    <select id="emat2" onchange="carregarRolosEt()">
+      ${_matsEt.map(m => `<option value="${esc(m.id)}">${esc(m.referencia)} — ${esc(m.descricao || '')} ${esc(m.cor || '')}</option>`).join('')}
+    </select>
+    <label>Rolo</label>
+    <select id="erolo"></select>
+    <label>Cópias de cada etiqueta</label>
+    <input id="ecop" type="number" min="1" value="1" inputmode="numeric">
+    <button class="b" onclick="imprimirSelEt()">🖨 Imprimir etiqueta(s)</button>`
+    : '<div class="mut">Ainda não há tecidos guardados. Cria-os no separador “Materiais” e dá entrada de rolos.</div>'}
+  </div>
+  <div class="card"><h2>Ou escrever o código de um rolo</h2>
+    <div class="row"><input id="rc" placeholder="R-000123" autocapitalize="characters"><button class="b sec" style="flex:none;margin:0" onclick="reimp()">🖨 Imprimir</button></div></div>`;
+  if (_matsEt.length) carregarRolosEt();
+};
+async function carregarRolosEt() {
+  _rolosEt = await q(sb.from('rolos').select('*').eq('material_id', $('#emat2').value).order('codigo'));
+  const m = _matsEt.find(x => x.id === $('#emat2').value);
+  const disp = _rolosEt.filter(r => r.estado !== 'esgotado');
+  const opts = [];
+  if (disp.length > 1) opts.push(`<option value="ALL">Todos os rolos em stock (${disp.length})</option>`);
+  _rolosEt.forEach(r => opts.push(`<option value="${esc(r.codigo)}">${esc(r.codigo)} · Lote ${esc(r.lote || '—')} · ${fmt(r.quantidade_atual)} ${esc(m.unidade)}${r.localizacao ? ' · ' + esc(r.localizacao) : ''}${r.estado === 'esgotado' ? ' (esgotado)' : ''}</option>`));
+  $('#erolo').innerHTML = opts.join('') || '<option value="">Sem rolos deste tecido</option>';
+}
+function imprimirSelEt() {
+  const m = _matsEt.find(x => x.id === $('#emat2').value), v = $('#erolo').value;
+  if (!m || !v) return toast('Este tecido ainda não tem rolos', true);
+  const lista = v === 'ALL' ? _rolosEt.filter(r => r.estado !== 'esgotado') : _rolosEt.filter(r => r.codigo === v);
+  const cop = Math.max(1, Math.min(50, parseInt($('#ecop').value) || 1));
+  const html = lista.map(r => labelHtml(r.codigo, m.referencia + ' ' + (m.cor || ''), 'Lote ' + (r.lote || ''), fmt(r.quantidade_inicial) + ' ' + m.unidade).repeat(cop)).join('');
+  printLabels(html);
+}
+async function reimp() {
+  const c = $('#rc').value.trim().toUpperCase();
+  const r = await q(sb.from('rolos').select('*, materiais(*)').eq('codigo', c).maybeSingle());
+  if (!r) return toast('Rolo não encontrado', true);
+  printLabels(labelHtml(c, r.materiais.referencia + ' ' + (r.materiais.cor || ''), 'Lote ' + (r.lote || ''), fmt(r.quantidade_inicial) + ' ' + r.materiais.unidade));
+}
+
+views.copia = () => {
+  $('#view').innerHTML = `<div class="card"><h2>Cópia de segurança</h2>
+    <div class="mut">Os dados ficam guardados só neste navegador e neste aparelho. O telemóvel e o computador <b>não partilham</b> dados, e se limpares os dados do navegador perdes tudo. Faz uma cópia regularmente.</div>
+    <button class="b" onclick="exportar()">⬇ Exportar dados</button>
+    <label>Importar cópia (substitui os dados atuais)</label>
+    <input type="file" accept=".json" onchange="importar(this.files[0])"></div>
+  <div class="card"><h2>Resumo</h2>
+    ${DB.materiais.length} materiais · ${DB.localizacoes.length} localizações · ${DB.rolos.length} rolos · ${DB.movimentos.length} movimentos</div>`;
+};
+function exportar() {
+  const blob = new Blob([JSON.stringify(DB, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'armazem-' + hoje() + '.json';
+  a.click();
+}
+function importar(f) {
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (!d.materiais || !d.rolos || !d.movimentos || !d.localizacoes) throw new Error('Ficheiro inválido');
+      if (!confirm('Isto substitui todos os dados atuais. Continuar?')) return;
+      DB = d; DB.seq = DB.seq || 0; DB.mov = DB.mov || 0;
+      saveDB(); toast('Dados importados'); views.copia();
+    } catch (e) { toast('Erro ao importar: ' + e.message, true); }
+  };
+  rd.readAsText(f);
+}
+
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+renderNav();
+go('consultar');
+</script>
+</body>
+</html>
